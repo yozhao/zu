@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
-import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.protocol.TBinaryProtocol;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,9 +33,7 @@ import com.twitter.common.zookeeper.ZooKeeperClient;
 import com.twitter.common.zookeeper.testing.BaseZooKeeperTest;
 import com.twitter.finagle.Service;
 import com.twitter.finagle.builder.ClientBuilder;
-import com.twitter.finagle.thrift.ClientId;
 import com.twitter.finagle.thrift.ThriftClientFramedCodec;
-import com.twitter.finagle.thrift.ThriftClientFramedCodecFactory;
 import com.twitter.finagle.thrift.ThriftClientRequest;
 import com.twitter.util.Duration;
 import com.twitter.util.Future;
@@ -57,14 +55,12 @@ public class StandardFinagleClusterTest extends BaseZooKeeperTest{
 
     @Override
     public ServiceIface decorate(InetSocketAddress addr) {
-      
-      ThriftClientFramedCodecFactory codec = new ThriftClientFramedCodecFactory(ClientId.current(), false, new TCompactProtocol.Factory());
       Service<ThriftClientRequest, byte[]> client = ClientBuilder.safeBuild(ClientBuilder.get()
           .hosts(addr)
-          .codec(codec)
+          .codec(ThriftClientFramedCodec.get())
           .hostConnectionLimit(hostConnLimit));
       
-      return new ReqService.ServiceToClient(client, new TCompactProtocol.Factory());
+      return new ReqService.ServiceToClient(client, new TBinaryProtocol.Factory());
     }
 
     @Override
@@ -168,7 +164,7 @@ public class StandardFinagleClusterTest extends BaseZooKeeperTest{
       
       // build a zu finagle server from svc
       ZuFinagleServer server = new ZuFinagleServer("TestServer:"+node.port, node.port, 
-          new ReqService.Service(svcImpl, new TCompactProtocol.Factory()));
+          new ReqService.Service(svcImpl, new TBinaryProtocol.Factory()));
      
       server.start();
       server.joinCluster(cluster, svcImpl.getShards());
@@ -206,7 +202,7 @@ public class StandardFinagleClusterTest extends BaseZooKeeperTest{
       ReqService.ServiceIface brokerSvc = buildBrokerService(routingAlgorithm, ZuClusterTestBase.scatterGather);
       
       // start broker as a zu finagle server
-      broker = new ZuFinagleServer("TestBroker:"+ brokerPort, brokerPort, new ReqService.Service(brokerSvc, new TCompactProtocol.Factory())); 
+      broker = new ZuFinagleServer("TestBroker:"+ brokerPort, brokerPort, new ReqService.Service(brokerSvc, new TBinaryProtocol.Factory())); 
           
       broker.start();
       
